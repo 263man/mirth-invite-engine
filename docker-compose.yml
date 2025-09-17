@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   mirth-connect:
-    image: nextgenhealthcare/mirth-connect:4.5.1
+    image: ionite/mirth-connect:4.4.0
     container_name: mirth-connect
     ports:
       - "8443:8443" # Mirth Administrator Web UI
@@ -10,7 +8,7 @@ services:
     volumes:
       - mirth-data:/opt/mirth-connect/appdata
     environment:
-      - TZ=Europe/London # Adjusted for clarity
+      - TZ=Europe/London
     healthcheck:
       test: ["CMD", "curl", "-f", "https://localhost:8443"]
       interval: 30s
