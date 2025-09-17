@@ -1,9 +1,9 @@
 # Use a specific, known-good Java 11 base image
 FROM eclipse-temurin:11.0.16_8-jre-focal
 
-# Define the Mirth Connect version to build
-ARG MIRTH_VERSION=4.4.0.b2533
-ARG ARTIFACT_URL=https://s3.amazonaws.com/downloads.nextgen.com/Mirth-Connect-4.4.0/mirthconnect-${MIRTH_VERSION}-unix.tar.gz
+# Define the Mirth Connect version to build - UPDATED to a valid, downloadable version
+ARG MIRTH_VERSION=4.5.2.b363
+ARG ARTIFACT_URL=https://s3.amazonaws.com/downloads.mirthcorp.com/connect/${MIRTH_VERSION}/mirthconnect-${MIRTH_VERSION}-unix.tar.gz
 
 ENV MIRTH_HOME=/opt/mirth-connect
 

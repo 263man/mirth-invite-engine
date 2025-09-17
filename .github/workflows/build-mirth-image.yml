@@ -27,4 +27,4 @@ jobs:
         with:
           context: ./docker/mirth
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/mirth-connect:4.4.0
+          tags: ghcr.io/${{ github.repository_owner }}/mirth-connect:4.5.2
