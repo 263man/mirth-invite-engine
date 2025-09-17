@@ -1,14 +1,14 @@
 services:
   mirth-connect:
-    image: ionite/mirth-connect:4.4.0
+    image: ghcr.io/263man/mirth-connect:4.5.2
     container_name: mirth-connect
     ports:
-      - "8443:8443" # Mirth Administrator Web UI
-      - "6661:6661" # TCP Listener Port for our channel
+      - "8443:8443"
+      - "6661:6661"
     volumes:
       - mirth-data:/opt/mirth-connect/appdata
     environment:
-      - TZ=Europe/London
+      - TZ=Europe/Amsterdam
     healthcheck:
       test: ["CMD", "curl", "-f", "https://localhost:8443"]
       interval: 30s
@@ -22,7 +22,7 @@ services:
       context: ./src/MirthInviteEngine
       dockerfile: Dockerfile
     ports:
-      - "8080:8080" # .NET API Port
+      - "8080:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080
