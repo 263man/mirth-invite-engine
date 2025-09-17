@@ -1,0 +1,24 @@
+name: Publish Mirth Connect Image to GHCR
+
+on:
+  workflow_dispatch: # Allows us to run this workflow manually
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Pull Mirth Connect from Docker Hub
+        run: docker pull ionite/mirth-connect:4.4.0
+
+      - name: Tag image for GHCR
+        run: docker tag ionite/mirth-connect:4.4.0 ghcr.io/${{ github.repository_owner }}/mirth-connect:4.4.0
+
+      - name: Push image to GHCR
+        run: docker push ghcr.io/${{ github.repository_owner }}/mirth-connect:4.4.0
