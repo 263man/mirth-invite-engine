@@ -1,7 +1,7 @@
 # Use a specific, known-good Java 11 base image
 FROM eclipse-temurin:11.0.16_8-jre-focal
 
-# Define the Mirth Connect version to build - UPDATED to a valid, downloadable version
+# Define the Mirth Connect version to build
 ARG MIRTH_VERSION=4.5.2.b363
 ARG ARTIFACT_URL=https://s3.amazonaws.com/downloads.mirthcorp.com/connect/${MIRTH_VERSION}/mirthconnect-${MIRTH_VERSION}-unix.tar.gz
 
@@ -21,9 +21,8 @@ RUN echo "Downloading from ${ARTIFACT_URL}" && \
     mv "/tmp/Mirth Connect" "${MIRTH_HOME}" && \
     rm -f /tmp/mirth.tar.gz
 
-# Create a dedicated user for Mirth and set permissions
+# Create a dedicated user for Mirth and set permissions (without pre-creating appdata)
 RUN groupadd -r mirth && useradd --no-log-init -r -g mirth -d ${MIRTH_HOME} mirth && \
-    mkdir -p ${MIRTH_HOME}/appdata && \
     chown -R mirth:mirth ${MIRTH_HOME}
 
 # Expose the necessary ports
