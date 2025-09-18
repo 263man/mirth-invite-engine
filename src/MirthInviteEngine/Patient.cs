@@ -2,6 +2,9 @@ namespace MirthInviteEngine
 {
     public class Patient
     {
-        // Properties to be added in Day 2
+        public string? PatientID { get; set; }
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? DateOfBirth { get; set; }
     }
 }
