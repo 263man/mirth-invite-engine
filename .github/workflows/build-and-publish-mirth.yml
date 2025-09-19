@@ -1,7 +1,6 @@
 name: 'Build and Publish Mirth Connect Image'
 
 on:
-  # This allows the workflow to be run manually from the Actions tab
   workflow_dispatch:
 
 jobs:
@@ -9,7 +8,6 @@ jobs:
     name: 'Build and Push to GHCR'
     runs-on: ubuntu-latest
 
-    # GITHUB_TOKEN permissions are required to push to GHCR
     permissions:
       contents: read
       packages: write
@@ -29,10 +27,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./docker/mirth/Dockerfile # Specifies the path to our resilient Dockerfile
+          file: ./docker/mirth/Dockerfile
           push: true
-          # Tags the image with the version number for clarity
-          # Example: ghcr.io/your-username/your-repo-name:4.5.2
           tags: ghcr.io/${{ github.repository }}:4.5.2
           build-args: |
-            MIRTH_VERSION=4.5.2.b363
+            MIRTH_VERSION=4.5.2
