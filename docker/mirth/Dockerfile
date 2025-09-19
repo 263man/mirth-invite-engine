@@ -1,35 +1,46 @@
-# Use a specific, known-good Java 11 base image
-FROM eclipse-temurin:11.0.16_8-jre-focal
+# Use a specific, stable base image for Java 11
+FROM eclipse-temurin:11.0.22_7-jdk-focal
 
-# Define the Mirth Connect version to build
+# Argument for the Mirth Connect version, defaulting to 4.5.2
 ARG MIRTH_VERSION=4.5.2.b363
-ARG ARTIFACT_URL=https://s3.amazonaws.com/downloads.mirthcorp.com/connect/${MIRTH_VERSION}/mirthconnect-${MIRTH_VERSION}-unix.tar.gz
+ENV MIRTH_VERSION=${MIRTH_VERSION}
 
-ENV MIRTH_HOME=/opt/mirth-connect
+# Define primary and fallback download URLs
+ARG PRIMARY_URL="https://s3.amazonaws.com/downloads.nextgen.com/connect/${MIRTH_VERSION}/mirthconnect-${MIRTH_VERSION}-unix.tar.gz"
+ARG FALLBACK_URL="https://downloads.sourceforge.net/project/mirth-connect/Mirth%20Connect/${MIRTH_VERSION}/mirthconnect-${MIRTH_VERSION}-unix.tar.gz"
 
-# Install required utilities
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl ca-certificates && \
+# Set working directory
+WORKDIR /opt
+
+# Download, verify, and install Mirth Connect
+RUN apt-get update && apt-get install -y --no-install-recommends curl tar && \
+    echo "Attempting to download Mirth Connect from Primary URL: ${PRIMARY_URL}" && \
+    # Use curl with flags: fail fast (-f), show errors (-S), follow redirects (-L), retry 3 times
+    # If the primary URL fails, the || operator triggers the fallback
+    (curl -fsSL --retry 3 "${PRIMARY_URL}" -o mirthconnect.tar.gz || \
+     (echo "Primary download failed. Attempting Fallback URL: ${FALLBACK_URL}" && \
+      curl -fsSL --retry 3 "${FALLBACK_URL}" -o mirthconnect.tar.gz)) && \
+    # Verify that the download was successful and the file is not empty
+    if [ ! -s mirthconnect.tar.gz ]; then \
+        echo "FATAL: Mirth Connect download failed from all sources."; \
+        exit 1; \
+    fi && \
+    echo "Download successful. Extracting archive..." && \
+    tar -xzf mirthconnect.tar.gz && \
+    rm mirthconnect.tar.gz && \
+    apt-get purge -y curl && \
+    apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-WORKDIR /tmp
+# Set the Mirth Connect home directory environment variable
+ENV MIRTH_HOME /opt/mirth-connect
 
-# Download and extract the official Mirth Connect tarball
-RUN echo "Downloading from ${ARTIFACT_URL}" && \
-    curl -fSL "${ARTIFACT_URL}" -o /tmp/mirth.tar.gz && \
-    tar -xzf /tmp/mirth.tar.gz -C /tmp && \
-    mv "/tmp/Mirth Connect" "${MIRTH_HOME}" && \
-    rm -f /tmp/mirth.tar.gz
+# Expose Mirth Connect ports
+# 8080: HTTP Admin
+# 8443: HTTPS Admin
+EXPOSE 8080 8443
 
-# Create a dedicated user for Mirth and set permissions (without pre-creating appdata)
-RUN groupadd -r mirth && useradd --no-log-init -r -g mirth -d ${MIRTH_HOME} mirth && \
-    chown -R mirth:mirth ${MIRTH_HOME}
+WORKDIR /opt/mirth-connect
 
-# Expose the necessary ports
-EXPOSE 8443 6661
-
-USER mirth
-WORKDIR ${MIRTH_HOME}
-
-# Define the command to start the server
-CMD ["./mcserver"]
+# The command to run Mirth Connect
+CMD ["./mcservice", "run"]
