@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <channel version="4.5.2">
-  <id></id>
+  <id>123e4567-e89b-12d3-a456-426614174000</id> <!-- Added unique GUID -->
   <nextMetaDataId>2</nextMetaDataId>
   <name>HL7 ADT to JSON API</name>
   <description>Receives HL7 v2 ADT via TCP, transforms to JSON, sends to .NET API.</description>
