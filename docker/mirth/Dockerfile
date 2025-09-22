@@ -11,7 +11,7 @@ ARG DOWNLOAD_URL="https://s3.amazonaws.com/downloads.mirthcorp.com/connect/${MIR
 # Set working directory
 WORKDIR /opt
 
-# Download, verify, and install Mirth Connect
+# Download, verify, and install Mirth Connect, moving files to /opt/mirth-connect
 RUN apt-get update && apt-get install -y --no-install-recommends curl tar && \
     echo "Attempting to download Mirth Connect from Official S3 Mirror: ${DOWNLOAD_URL}" && \
     curl -fsSL --retry 3 "${DOWNLOAD_URL}" -o mirthconnect.tar.gz && \
@@ -21,6 +21,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl tar && \
     fi && \
     echo "Download successful. Extracting archive..." && \
     tar -xzf mirthconnect.tar.gz && \
+    mv "Mirth Connect" mirth-connect && \
+    chmod +x /opt/mirth-connect/mcservice && \
     rm mirthconnect.tar.gz && \
     apt-get purge -y curl && \
     apt-get clean && \
@@ -30,8 +32,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl tar && \
 ENV MIRTH_HOME=/opt/mirth-connect
 
 # Expose Mirth Connect ports
-EXPOSE 8080 8443
+EXPOSE 8080 8443 6661
 
+# Set working directory to Mirth Connect
 WORKDIR /opt/mirth-connect
 
 # The command to run Mirth Connect
