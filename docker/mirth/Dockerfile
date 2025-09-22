@@ -1,11 +1,11 @@
 # Use a specific, stable base image for Java 11
 FROM eclipse-temurin:11.0.22_7-jdk-focal
 
-# Argument for the Mirth Connect version
-ARG MIRTH_VERSION=4.5.2
+# Argument for the Mirth Connect version (now including build number for accurate S3 path)
+ARG MIRTH_VERSION=4.5.2.b363
 ENV MIRTH_VERSION=${MIRTH_VERSION}
 
-# Define the canonical download URL from the official S3 mirror (verified to exist for Unix tar.gz)
+# Define the canonical download URL from the official S3 mirror (verified pattern with build number)
 ARG DOWNLOAD_URL="https://s3.amazonaws.com/downloads.mirthcorp.com/connect/${MIRTH_VERSION}/mirthconnect-${MIRTH_VERSION}-unix.tar.gz"
 
 # Set working directory
