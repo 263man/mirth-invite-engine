@@ -5,15 +5,16 @@ services:
       dockerfile: Dockerfile
     container_name: mirth-connect
     ports:
-      - "8080:8080"  # Map HTTP port for dashboard access
+      - "8080:8080"
       - "8443:8443"
       - "6661:6661"
     volumes:
       - mirth-data:/opt/mirth-connect/appdata
     environment:
       - TZ=UTC
+      - USE_SYSTEM_CA_CERTS=  # Explicitly unset to disable cacert modifications
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080"]  # Use HTTP instead of HTTPS
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
       interval: 30s
       timeout: 10s
       retries: 5

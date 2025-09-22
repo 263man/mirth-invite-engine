@@ -26,7 +26,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl tar && \
     rm mirthconnect.tar.gz && \
     apt-get purge -y curl && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    # Set default keystore password in mirth.properties
+    echo "keystore.password = changeit" > /opt/mirth-connect/conf/mirth.properties
 
 # Set the Mirth Connect home directory environment variable
 ENV MIRTH_HOME=/opt/mirth-connect
