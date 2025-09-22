@@ -1,7 +1,7 @@
 # Use a specific, stable base image for Java 11
 FROM eclipse-temurin:11.0.22_7-jdk-focal
 
-# Argument for the Mirth Connect version (now including build number for accurate S3 path)
+# Argument for the Mirth Connect version (includes build number for S3 path)
 ARG MIRTH_VERSION=4.5.2.b363
 ENV MIRTH_VERSION=${MIRTH_VERSION}
 
@@ -27,7 +27,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl tar && \
     rm -rf /var/lib/apt/lists/*
 
 # Set the Mirth Connect home directory environment variable
-ENV MIRTH_HOME /opt/mirth-connect
+ENV MIRTH_HOME=/opt/mirth-connect
 
 # Expose Mirth Connect ports
 EXPOSE 8080 8443

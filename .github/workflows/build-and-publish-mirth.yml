@@ -29,6 +29,6 @@ jobs:
           context: .
           file: ./docker/mirth/Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository }}:4.5.2
+          tags: ghcr.io/${{ github.repository }}:4.5.2.b363
           build-args: |
-            MIRTH_VERSION=4.5.2
+            MIRTH_VERSION=4.5.2.b363
