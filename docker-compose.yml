@@ -1,7 +1,5 @@
 services:
   mirth-connect:
-    # REMOVED: The old 'image' line has been replaced with the 'build' block below.
-    # image: ghcr.io/263man/mirth-connect:4.5.2
     build:
       context: ./docker/mirth
       dockerfile: Dockerfile
@@ -12,7 +10,7 @@ services:
     volumes:
       - mirth-data:/opt/mirth-connect/appdata
     environment:
-      - TZ=Europe/Amsterdam
+      - TZ=UTC
     healthcheck:
       test: ["CMD", "curl", "-f", "-k", "https://localhost:8443"]
       interval: 30s

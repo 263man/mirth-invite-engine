@@ -5,35 +5,34 @@ FROM eclipse-temurin:11.0.22_7-jdk-focal
 ARG MIRTH_VERSION=4.5.2
 ENV MIRTH_VERSION=${MIRTH_VERSION}
 
-# Define the canonical download URL for the OFFICIAL UNIX INSTALLER SCRIPT
-ARG DOWNLOAD_URL="https://github.com/nextgenhealthcare/connect/releases/download/${MIRTH_VERSION}/mirthconnect-${MIRTH_VERSION}-unix.sh"
+# Define the canonical download URL from the official S3 mirror (verified to exist for Unix tar.gz)
+ARG DOWNLOAD_URL="https://s3.amazonaws.com/downloads.mirthcorp.com/connect/${MIRTH_VERSION}/mirthconnect-${MIRTH_VERSION}-unix.tar.gz"
 
-# Set a target directory for the installation
-ENV MIRTH_HOME /opt/mirth-connect
+# Set working directory
+WORKDIR /opt
 
-# Install dependencies, download, install Mirth, and clean up
-RUN apt-get update && apt-get install -y --no-install-recommends curl && \
-    cd /tmp && \
-    echo "Attempting to download Mirth Connect installer from ${DOWNLOAD_URL}" && \
-    curl -fSL --retry 3 "${DOWNLOAD_URL}" -o mirthconnect-installer.sh && \
-    if [ ! -s mirthconnect-installer.sh ]; then \
-        echo "FATAL: Mirth Connect installer download failed."; \
+# Download, verify, and install Mirth Connect
+RUN apt-get update && apt-get install -y --no-install-recommends curl tar && \
+    echo "Attempting to download Mirth Connect from Official S3 Mirror: ${DOWNLOAD_URL}" && \
+    curl -fsSL --retry 3 "${DOWNLOAD_URL}" -o mirthconnect.tar.gz && \
+    if [ ! -s mirthconnect.tar.gz ]; then \
+        echo "FATAL: Mirth Connect download failed from the official source."; \
         exit 1; \
     fi && \
-    echo "Download successful. Running installer..." && \
-    chmod +x mirthconnect-installer.sh && \
-    # The installer prompts for a path; we pipe the target path to it for a silent install.
-    echo "${MIRTH_HOME}" | ./mirthconnect-installer.sh && \
-    echo "Installation complete. Cleaning up..." && \
-    cd / && rm -rf /tmp/* && \
-    apt-get purge -y --auto-remove curl && \
+    echo "Download successful. Extracting archive..." && \
+    tar -xzf mirthconnect.tar.gz && \
+    rm mirthconnect.tar.gz && \
+    apt-get purge -y curl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+# Set the Mirth Connect home directory environment variable
+ENV MIRTH_HOME /opt/mirth-connect
 
 # Expose Mirth Connect ports
 EXPOSE 8080 8443
 
-WORKDIR ${MIRTH_HOME}
+WORKDIR /opt/mirth-connect
 
 # The command to run Mirth Connect
 CMD ["./mcservice", "run"]
