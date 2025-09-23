@@ -12,7 +12,7 @@ services:
     environment:
       - TZ=UTC
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/api/users"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/server/version"]
       interval: 20s
       timeout: 10s
       retries: 6
