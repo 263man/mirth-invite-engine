@@ -1,63 +1,46 @@
-# Use a specific, stable base image for Java 11
-FROM eclipse-temurin:11.0.22_7-jdk-focal
+# docker/mirth/Dockerfile
+# Build a Mirth Connect image (automated, non-interactive) suitable for Codespaces.
+FROM eclipse-temurin:11-jre-focal
 
-# Argument for the Mirth Connect version (includes build number for S3 path)
-ARG MIRTH_VERSION=4.5.2.b363
-ENV MIRTH_VERSION=${MIRTH_VERSION}
+# Use a verified, automatable Mirth release (v4.5.2 for bug fixes)
+ENV MIRTH_VERSION=4.5.2.b363
+ENV MIRTH_URL=https://s3.us-west-1.amazonaws.com/downloads.mirthcorp.com/connect/4.5.2.b363/mirthconnect-4.5.2.b363-unix.tar.gz
 
-# Define the canonical download URL from the official S3 mirror (verified pattern with build number)
-ARG DOWNLOAD_URL="https://s3.amazonaws.com/downloads.mirthcorp.com/connect/${MIRTH_VERSION}/mirthconnect-${MIRTH_VERSION}-unix.tar.gz"
-ARG CLI_DOWNLOAD_URL="https://s3.amazonaws.com/downloads.mirthcorp.com/connect/${MIRTH_VERSION}/mirthconnectcli-${MIRTH_VERSION}-unix.tar.gz"
-
-# Set working directory
+# Work dir
 WORKDIR /opt
 
-# Download, verify, and install Mirth Connect, moving files to /opt/mirth-connect
-RUN apt-get update && apt-get install -y --no-install-recommends curl tar && \
-    echo "Attempting to download Mirth Connect from Official S3 Mirror: ${DOWNLOAD_URL}" && \
-    curl -fsSL --retry 3 "${DOWNLOAD_URL}" -o mirthconnect.tar.gz && \
-    if [ ! -s mirthconnect.tar.gz ]; then \
-        echo "FATAL: Mirth Connect download failed from the official source."; \
-        exit 1; \
-    fi && \
-    echo "Download successful. Extracting archive..." && \
-    tar -xzf mirthconnect.tar.gz && \
-    mv "Mirth Connect" mirth-connect && \
-    chmod +x /opt/mirth-connect/mcservice && \
-    rm mirthconnect.tar.gz && \
-    # Download and install CLI to fix migration bug
-    echo "Attempting to download Mirth CLI from Official S3 Mirror: ${CLI_DOWNLOAD_URL}" && \
-    curl -fsSL --retry 3 "${CLI_DOWNLOAD_URL}" -o mirthconnectcli.tar.gz && \
-    if [ ! -s mirthconnectcli.tar.gz ]; then \
-        echo "FATAL: Mirth CLI download failed from the official source."; \
-        exit 1; \
-    fi && \
-    echo "Download successful. Extracting CLI archive..." && \
-    tar -xzf mirthconnectcli.tar.gz && \
-    mv "Mirth Connect CLI" mirth-connect-cli && \
-    cp mirth-connect-cli/conf/log4j2-cli.properties /opt/mirth-connect/conf/ && \
-    rm -rf mirthconnectcli.tar.gz mirth-connect-cli && \
-    apt-get purge -y curl && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
-    # Create mirth.properties with essential settings
-    mkdir -p /opt/mirth-connect/conf && \
-    echo "http.port = 8080" > /opt/mirth-connect/conf/mirth.properties && \
-    echo "https.port = 8443" >> /opt/mirth-connect/conf/mirth.properties && \
-    echo "keystore.storetype = JKS" >> /opt/mirth-connect/conf/mirth.properties && \
-    echo "keystore.path = conf/keystore.jks" >> /opt/mirth-connect/conf/mirth.properties && \
-    echo "keystore.password = changeit" >> /opt/mirth-connect/conf/mirth.properties && \
-    echo "database = derby" >> /opt/mirth-connect/conf/mirth.properties && \
-    echo "database.url = jdbc:derby:/opt/mirth-connect/appdata/mirthdb;create=true" >> /opt/mirth-connect/conf/mirth.properties
+# Install tools, download tar.gz, unpack, create user, set ownership, and create mirth.properties
+RUN apt-get update && apt-get install -y --no-install-recommends curl tar ca-certificates \
+    && echo "Downloading Mirth Connect ${MIRTH_VERSION} from ${MIRTH_URL}" \
+    && curl -fsSL "${MIRTH_URL}" -o /tmp/mirth.tar.gz \
+    && tar -xzf /tmp/mirth.tar.gz -C /opt \
+    && rm /tmp/mirth.tar.gz \
+    && mv "/opt/Mirth Connect" /opt/mirth-connect || true \
+    \
+    # Create a mirth user and ensure permissions so migrations run as intended
+    && groupadd -r mirth || true \
+    && useradd --no-log-init -r -g mirth -d /opt/mirth-connect mirth || true \
+    && mkdir -p /opt/mirth-connect/appdata /opt/mirth-connect/conf \
+    && chown -R mirth:mirth /opt/mirth-connect \
+    \
+    # Write a minimal, valid mirth.properties (key=value format – no spaces around "=")
+    && printf 'http.port=8080\nhttps.port=0\nkeystore.storetype=JKS\nkeystore.path=conf/keystore.jks\nkeystore.password=changeit\ndatabase=derby\ndatabase.url=jdbc:derby:/opt/mirth-connect/appdata/mirthdb;create=true\n' > /opt/mirth-connect/conf/mirth.properties \
+    && chown mirth:mirth /opt/mirth-connect/conf/mirth.properties \
+    \
+    # cleanup
+    && apt-get purge -y --auto-remove curl tar \
+    && rm -rf /var/lib/apt/lists/*
 
-# Set the Mirth Connect home directory environment variable
+# Set environment variables
 ENV MIRTH_HOME=/opt/mirth-connect
 
-# Expose Mirth Connect ports
-EXPOSE 8080 8443 6661
+# Expose HTTP (admin REST), and MLLP port
+EXPOSE 8080 6661
 
-# Set working directory to Mirth Connect
+# Ensure we run as the mirth user
+USER mirth
+
 WORKDIR /opt/mirth-connect
 
-# The command to run Mirth Connect
-CMD ["./mcservice", "run"]
+# Start Mirth (mcserver will run in foreground; mcservice may be present but mcserver is standard)
+CMD ["./mcserver"]

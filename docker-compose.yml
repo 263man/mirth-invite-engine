@@ -5,19 +5,17 @@ services:
       dockerfile: Dockerfile
     container_name: mirth-connect
     ports:
-      - "8080:8080"
-      - "8443:8443"
-      - "6661:6661"
+      - "8080:8080"  # admin UI / REST over plain HTTP for our demo
+      - "6661:6661"  # MLLP listener port
     volumes:
       - mirth-data:/opt/mirth-connect/appdata
     environment:
       - TZ=UTC
-      - USE_SYSTEM_CA_CERTS=  # Explicitly unset to disable cacert modifications
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080"]
-      interval: 30s
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/users"]
+      interval: 20s
       timeout: 10s
-      retries: 5
+      retries: 6
       start_period: 60s
 
   mirth-invite-engine-api:
@@ -26,7 +24,7 @@ services:
       context: ./src/MirthInviteEngine
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8081:8080"   # Changed host port to 8081 to avoid conflict with Mirth's 8080
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080
