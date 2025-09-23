@@ -1,58 +1,57 @@
-# docker/mirth/Dockerfile
-# Build a working Mirth Connect 4.5.2.b363 image inside GitHub Codespaces
 FROM eclipse-temurin:11-jre-focal
 
-# Noninteractive install
-ENV DEBIAN_FRONTEND=noninteractive
-ENV MIRTH_VERSION=4.5.2.b363
-ENV MIRTH_HOME=/opt/mirth-connect
+# Install dependencies
+RUN apt-get update && apt-get install -y curl tar && rm -rf /var/lib/apt/lists/*
 
-# Install only required tools
-RUN set -eux; \
-    apt-get update; \
-    apt-get install -y --no-install-recommends \
-        ca-certificates curl tar unzip gzip procps; \
-    rm -rf /var/lib/apt/lists/*
+# Download and extract Mirth Connect
+RUN curl -L -o /tmp/mirthconnect.tar.gz https://s3.amazonaws.com/downloads.mirthcorp.com/connect/4.5.2.b363/mirthconnect-4.5.2.b363-unix.tar.gz \
+    && mkdir -p /opt/mirth-connect \
+    && tar -xzf /tmp/mirthconnect.tar.gz -C /opt/mirth-connect --strip-components=1 \
+    && rm /tmp/mirthconnect.tar.gz
 
-# Download and extract Mirth Connect tar.gz (S3 mirror, fixed version)
-RUN set -eux; \
-    MIRTH_URL="https://s3.amazonaws.com/downloads.mirthcorp.com/connect/${MIRTH_VERSION}/mirthconnect-${MIRTH_VERSION}-unix.tar.gz"; \
-    echo "Downloading Mirth Connect from $MIRTH_URL"; \
-    curl -fsSL --retry 3 --connect-timeout 15 "$MIRTH_URL" -o /tmp/mirth.tar.gz; \
-    mkdir -p /opt/mirth-connect; \
-    tar -xzf /tmp/mirth.tar.gz -C /opt/mirth-connect --strip-components=1; \
-    rm /tmp/mirth.tar.gz; \
-    chmod +x /opt/mirth-connect/mcservice /opt/mirth-connect/mcserver
+# Create mirth user and set permissions
+RUN useradd -ms /bin/bash mirth \
+    && chown -R mirth:mirth /opt/mirth-connect \
+    && chmod +x /opt/mirth-connect/mcservice /opt/mirth-connect/mcserver
 
-# Create mirth user and setup directories
-RUN set -eux; \
-    groupadd -r mirth || true; \
-    useradd --no-log-init -r -g mirth -d /opt/mirth-connect mirth || true; \
-    mkdir -p /opt/mirth-connect/appdata /opt/mirth-connect/conf; \
-    chown -R mirth:mirth /opt/mirth-connect
+# Generate keystore in temporary location with explicit permissions
+RUN keytool -genkeypair -alias mirth -keyalg RSA -keysize 2048 -validity 365 -storetype JKS \
+    -keystore /tmp/keystore.jks \
+    -dname "CN=Mirth, OU=Unknown, O=Unknown, L=Unknown, ST=Unknown, C=Unknown" \
+    -storepass changeit -keypass changeit -noprompt \
+    && echo "Keystore generated in /tmp. Verifying before chmod:" \
+    && ls -l /tmp/keystore.jks \
+    && chown mirth:mirth /tmp/keystore.jks \
+    && chmod 600 /tmp/keystore.jks \
+    && echo "Keystore permissions set in /tmp. Verifying:" \
+    && ls -l /tmp/keystore.jks \
+    && mv /tmp/keystore.jks /opt/mirth-connect/conf/keystore.jks \
+    && echo "Keystore moved to /opt/mirth-connect/conf. Verifying final permissions:" \
+    && ls -l /opt/mirth-connect/conf/keystore.jks
 
-# Configure Mirth (disable HTTPS, set Derby DB, keystore password fix)
-RUN set -eux; \
-    cat > /opt/mirth-connect/conf/mirth.properties <<'EOF'
-http.port=8080
-https.port=0
-keystore.storetype=JKS
-keystore.path=conf/keystore.jks
-keystore.password=changeit
-database=derby
-database.url=jdbc:derby:/opt/mirth-connect/appdata/mirthdb;create=true
-EOF
+# Configure mirth.properties with debug logging and Derby database
+RUN echo "http.port=8080" > /opt/mirth-connect/conf/mirth.properties \
+    && echo "https.port=0" >> /opt/mirth-connect/conf/mirth.properties \
+    && echo "keystore.storetype=JKS" >> /opt/mirth-connect/conf/mirth.properties \
+    && echo "keystore.path=conf/keystore.jks" >> /opt/mirth-connect/conf/mirth.properties \
+    && echo "keystore.password=changeit" >> /opt/mirth-connect/conf/mirth.properties \
+    && echo "log4j.rootLogger=DEBUG,console" >> /opt/mirth-connect/conf/mirth.properties \
+    && echo "database=derby" >> /opt/mirth-connect/conf/mirth.properties \
+    && echo "database.url=jdbc:derby:/opt/mirth-connect/appdata/mirthdb;create=true" >> /opt/mirth-connect/conf/mirth.properties \
+    && chown mirth:mirth /opt/mirth-connect/conf/mirth.properties \
+    && chmod 600 /opt/mirth-connect/conf/mirth.properties \
+    && echo "mirth.properties configured. Verifying permissions:" \
+    && ls -l /opt/mirth-connect/conf/mirth.properties
 
-# Set ownership for mirth.properties
-RUN set -eux; \
-    chown mirth:mirth /opt/mirth-connect/conf/mirth.properties
+# Final permissions check
+RUN echo "Final permissions check for all files:" \
+    && chmod 600 /opt/mirth-connect/conf/keystore.jks \
+    && ls -l /opt/mirth-connect/conf/keystore.jks \
+    && ls -l /opt/mirth-connect/conf/mirth.properties
 
-# Expose ports
-EXPOSE 8080 6661
-
-# Switch to mirth user
+# Run as mirth user
 USER mirth
-
-# Start Mirth Connect
 WORKDIR /opt/mirth-connect
-CMD ["./mcserver"]
+CMD ["./mcservice", "run"]
+
+EXPOSE 8080 6661
